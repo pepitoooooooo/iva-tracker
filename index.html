@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Control de IVA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#faf3e9;
+    --paper:#fffaf3;
+    --ink:#2b1810;
+    --ink-soft:#6b5847;
+    --brick:#9c1f10;
+    --brick-dark:#7a1810;
+    --gold:#c9973a;
+    --gold-soft:#f0dfb8;
+    --line:#e6d8c2;
+    --shadow: 0 12px 30px -14px rgba(43,24,16,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream);
+    background-image:
+      radial-gradient(circle at 100% 0%, rgba(201,151,58,0.10), transparent 45%),
+      radial-gradient(circle at 0% 100%, rgba(156,31,16,0.06), transparent 45%);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:28px 18px 60px;}
+  header.top{padding:4px 4px 22px;}
+  .eyebrow{
+    font-size:12.5px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--brick); font-weight:700; margin-bottom:6px;
+  }
+  h1.display{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:32px;
+    line-height:1.05;
+    margin:0 0 8px;
+    color:var(--ink);
+  }
+  header.top p{margin:0; color:var(--ink-soft); font-size:14.5px; line-height:1.5;}
+
+  .card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+    padding:22px 20px;
+    margin-bottom:18px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* ---- Estado del mes ---- */
+  .estado-card{ text-align:center; }
+  .estado-mes{
+    font-family:'Fraunces', serif;
+    font-size:19px;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin-bottom:2px;
+    text-transform:capitalize;
+  }
+  .estado-badge{
+    display:inline-flex; align-items:center; gap:8px;
+    font-weight:800; font-size:15px; letter-spacing:.02em;
+    padding:9px 18px; border-radius:999px; margin:10px 0 6px;
+  }
+  .estado-badge.gold{ background:var(--gold-soft); color:#7a5a12; }
+  .estado-badge.urgent{ background:#fce7d9; color:var(--brick); }
+  .estado-badge.late{ background:var(--brick); color:#fff8ee; animation:pulse 1.8s ease-in-out infinite; }
+  .estado-badge.paid{ background:#e4efe0; color:#2f6b3a; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(156,31,16,.45);} 50%{ box-shadow:0 0 0 9px rgba(156,31,16,0);} }
+
+  .estado-detalle{ font-size:13.5px; color:var(--ink-soft); margin-bottom:16px; }
+
+  /* Sello de pagado, estilo timbre */
+  .sello{
+    position:absolute; top:14px; right:-8px;
+    width:118px; height:118px;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+    opacity:0; transform:rotate(-18deg) scale(.7);
+    transition:opacity .35s ease, transform .35s ease;
+  }
+  .sello.show{ opacity:1; transform:rotate(-18deg) scale(1); }
+  .sello svg{ width:100%; height:100%; }
+
+  .btn{
+    appearance:none; border:none; cursor:pointer;
+    font-family:inherit; font-weight:700; font-size:14.5px;
+    border-radius:13px; padding:13px 18px;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    width:100%;
+  }
+  .btn-primary{ background:var(--brick); color:#fff8ee; }
+  .btn-primary:active{ background:var(--brick-dark); }
+  .btn-ghost{ background:transparent; color:var(--brick); border:1.5px solid var(--brick); }
+  .btn-aviso{ background:var(--gold-soft); color:#7a5a12; margin-top:9px; font-size:13.5px; padding:11px 16px; }
+  .btn-aviso:active{ background:var(--gold); color:#fff8ee; }
+  .btn-row{ display:flex; gap:10px; margin-top:6px; }
+  .btn-row .btn{ width:auto; flex:1; }
+  input[type="file"]{ display:none; }
+
+  .toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff8ee; font-size:13px; font-weight:600;
+    padding:12px 18px; border-radius:12px; box-shadow:var(--shadow);
+    opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+    max-width:88vw; text-align:center; z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .voucher-preview{
+    margin-top:14px; border-radius:14px; overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .voucher-preview img{ display:block; width:100%; max-height:220px; object-fit:cover; }
+  .voucher-meta{ font-size:12.5px; color:var(--ink-soft); padding:8px 4px 2px; text-align:center; }
+
+  /* ---- Calendario ---- */
+  .cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .cal-nav{
+    background:var(--cream); border:1px solid var(--line); color:var(--brick);
+    width:34px; height:34px; border-radius:10px; font-size:16px; font-weight:800;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .cal-title{ font-family:'Fraunces', serif; font-weight:600; font-size:16.5px; text-transform:capitalize;}
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .cal-dow{ font-size:10.5px; text-align:center; color:var(--ink-soft); font-weight:700; padding-bottom:4px;}
+  .cal-day{
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    font-size:13px; border-radius:9px; color:var(--ink-soft); position:relative;
+  }
+  .cal-day.empty{ visibility:hidden; }
+  .cal-day.venc{ background:var(--gold-soft); color:#7a5a12; font-weight:700; }
+  .cal-day.venc.today{ outline:2px solid var(--brick); outline-offset:1px; }
+  .cal-day.today:not(.venc){ background:var(--line); color:var(--ink); font-weight:700; }
+  .cal-day.paid-day{ background:#e4efe0; color:#2f6b3a; }
+  .legend{ display:flex; gap:14px; margin-top:14px; font-size:11.5px; color:var(--ink-soft); flex-wrap:wrap; }
+  .legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .dot{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+  .dot.venc{ background:var(--gold); }
+  .dot.paid{ background:#4c8a56; }
+
+  /* ---- Historial ---- */
+  h2.section-title{
+    font-family:'Fraunces', serif; font-weight:600; font-size:17px;
+    margin:26px 4px 10px;
+  }
+  .hist-item{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 6px; border-bottom:1px solid var(--line);
+  }
+  .hist-item:last-child{ border-bottom:none; }
+  .hist-thumb{
+    width:44px; height:44px; border-radius:10px; object-fit:cover;
+    background:var(--cream); border:1px solid var(--line); flex-shrink:0;
+  }
+  .hist-icon{
+    width:44px; height:44px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:19px;
+    background:var(--cream); border:1px solid var(--line);
+  }
+  .hist-info{ flex:1; min-width:0; }
+  .hist-mes{ font-weight:700; font-size:14px; text-transform:capitalize; }
+  .hist-sub{ font-size:12.5px; color:var(--ink-soft); }
+  .hist-tag{ font-size:11.5px; font-weight:800; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .hist-tag.ok{ background:#e4efe0; color:#2f6b3a; }
+  .hist-tag.miss{ background:#fce7d9; color:var(--brick); }
+
+  footer.note{
+    margin-top:22px; font-size:12px; color:var(--ink-soft); text-align:center; line-height:1.6;
+    padding:0 8px;
+  }
+  footer.note b{ color:var(--ink); }
+
+  /* ---- Sincronización ---- */
+  .sync-label{ display:block; font-size:12px; font-weight:700; color:var(--ink-soft); margin:10px 0 4px; }
+  .sync-input{
+    width:100%; padding:11px 13px; border-radius:11px; border:1px solid var(--line);
+    background:var(--cream); font-family:inherit; font-size:14px; color:var(--ink);
+  }
+  .sync-input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+  .sync-help{ font-size:11.5px; color:var(--ink-soft); line-height:1.6; margin-top:14px; }
+  .sync-status-ok{ color:#2f6b3a; }
+  .sync-status-err{ color:var(--brick); }
+
+  .collapsible-head{
+    appearance:none; border:none; background:none; cursor:pointer;
+    width:100%; padding:22px 20px; display:flex; align-items:center; justify-content:space-between;
+    font-family:'Fraunces', serif; font-weight:600; font-size:16.5px; color:var(--ink);
+  }
+  .collapsible-right{ display:flex; align-items:center; gap:9px; }
+  .sync-dot{ width:8px; height:8px; border-radius:50%; background:var(--line); flex-shrink:0; }
+  .sync-dot.ok{ background:#4c8a56; }
+  .sync-dot.err{ background:var(--brick); }
+  .sync-dot.pending{ background:var(--gold); }
+  .chev{ color:var(--brick); font-size:13px; transition:transform .25s ease; display:inline-block; }
+  .collapsible-head.open .chev{ transform:rotate(180deg); }
+  .collapsible-body{ display:none; padding:0 20px 22px; }
+  .collapsible-body.open{ display:block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">Impuestos · Empresa</div>
+    <h1 class="display">Control de IVA</h1>
+    <p>El plazo vence entre el día 15 y el 20 de cada mes. Sube tu comprobante apenas pagues.</p>
+  </header>
+
+  <!-- Estado del mes actual -->
+  <div class="card estado-card">
+    <div class="sello" id="sello">
+      <svg viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="92" fill="none" stroke="#9c1f10" stroke-width="4" stroke-dasharray="6 5" opacity="0.85"/>
+        <circle cx="100" cy="100" r="76" fill="none" stroke="#9c1f10" stroke-width="2.5" opacity="0.85"/>
+        <text x="100" y="94" text-anchor="middle" font-family="Fraunces, serif" font-weight="700" font-size="30" fill="#9c1f10" opacity="0.9">PAGADO</text>
+        <text x="100" y="118" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="12" fill="#9c1f10" opacity="0.85" id="sello-fecha">--/--</text>
+      </svg>
+    </div>
+    <div class="estado-mes" id="estado-mes">-</div>
+    <div class="estado-badge gold" id="estado-badge">Cargando…</div>
+    <div class="estado-detalle" id="estado-detalle"></div>
+
+    <input type="file" id="file-input" accept="image/*" capture="environment">
+    <button class="btn btn-primary" id="btn-subir">📎 Subir comprobante</button>
+    <button class="btn btn-aviso" id="btn-avisar">🔔 Avisar a Claude que ya pagué</button>
+    <div class="btn-row" id="row-pagado" style="display:none;">
+      <button class="btn btn-ghost" id="btn-ver">👁️ Ver comprobante</button>
+      <button class="btn btn-ghost" id="btn-quitar">🗑️ Quitar</button>
+    </div>
+    <div id="voucher-box"></div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- Calendario -->
+  <div class="card">
+    <div class="cal-head">
+      <button class="cal-nav" id="cal-prev">‹</button>
+      <div class="cal-title" id="cal-title">-</div>
+      <button class="cal-nav" id="cal-next">›</button>
+    </div>
+    <div class="cal-grid" id="cal-dow-row"></div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="legend">
+      <span><i class="dot venc"></i> Plazo IVA (15–20)</span>
+      <span><i class="dot paid"></i> Comprobante subido</span>
+    </div>
+  </div>
+
+  <div class="card" id="sync-card" style="padding:0;">
+    <button type="button" class="collapsible-head" id="sync-toggle">
+      <span class="collapsible-title">🔄 Sincronizar entre dispositivos</span>
+      <span class="collapsible-right">
+        <span class="sync-dot" id="sync-dot"></span>
+        <span class="chev" id="sync-chev">▾</span>
+      </span>
+    </button>
+    <div class="collapsible-body" id="sync-body">
+    <div id="sync-status" class="estado-detalle" style="margin-bottom:12px;"></div>
+
+    <div id="sync-form">
+      <label class="sync-label">Usuario u organización de GitHub</label>
+      <input type="text" id="sync-owner" class="sync-input" placeholder="ej: pepitoooooooo" autocomplete="off">
+      <label class="sync-label">Repositorio</label>
+      <input type="text" id="sync-repo" class="sync-input" placeholder="ej: iva-tracker" autocomplete="off">
+      <label class="sync-label">Token de acceso personal</label>
+      <input type="password" id="sync-token" class="sync-input" placeholder="github_pat_..." autocomplete="off">
+      <button class="btn btn-primary" id="btn-guardar-config" style="margin-top:10px;">💾 Guardar configuración</button>
+    </div>
+
+    <div class="btn-row" id="sync-actions" style="display:none;">
+      <button class="btn btn-primary" id="btn-sync-now">🔄 Sincronizar ahora</button>
+      <button class="btn btn-ghost" id="btn-sync-editar">⚙️ Editar</button>
+    </div>
+
+    <div class="sync-help">
+      El token se genera en GitHub: <b>Settings → Developer settings → Personal access tokens → Fine-grained tokens</b>,
+      dándole acceso solo a este repositorio con permiso <b>Contents: Read and write</b>. Queda guardado únicamente en
+      este navegador — repite esta configuración (con el mismo repo) en cada dispositivo que quieras sincronizar.
+    </div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Historial</h2>
+  <div class="card" style="padding:6px 14px;">
+    <div id="historial"></div>
+  </div>
+
+  <footer class="note">
+    Ya dejé configurados recordatorios en <b>Google Calendar</b> del 15 al 20 de cada mes (más frecuentes el día 20).
+    El botón <b>🔔 Avisar a Claude</b> copia un mensaje listo y te abre Claude en una pestaña nueva — pégalo y envíalo
+    para que cancele los recordatorios restantes de ese mes. No se envía nada de forma automática ni en segundo plano.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const PREFIX = 'iva-tracker:';
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const DOW = ['D','L','M','M','J','V','S'];
+
+  const today = new Date();
+  let viewYear = today.getFullYear();
+  let viewMonth = today.getMonth(); // 0-indexed, month being BROWSED in the calendar/history
+  const currentKey = keyFor(today.getFullYear(), today.getMonth());
+
+  function keyFor(y,m){ return `${y}-${String(m+1).padStart(2,'0')}`; }
+  function getRecord(key){
+    try{ return JSON.parse(localStorage.getItem(PREFIX+key) || 'null'); }
+    catch(e){ return null; }
+  }
+  function setRecord(key,obj){ localStorage.setItem(PREFIX+key, JSON.stringify(obj)); }
+  function removeRecord(key){ localStorage.removeItem(PREFIX+key); }
+
+  function fmtFecha(iso){
+    const d = new Date(iso);
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  }
+
+  // ---------- Estado del mes actual (siempre el mes real, no el navegado) ----------
+  function renderEstado(){
+    const rec = getRecord(currentKey);
+    const badge = document.getElementById('estado-badge');
+    const detalle = document.getElementById('estado-detalle');
+    const sello = document.getElementById('sello');
+    const btnSubir = document.getElementById('btn-subir');
+    const rowPagado = document.getElementById('row-pagado');
+    const voucherBox = document.getElementById('voucher-box');
+
+    document.getElementById('estado-mes').textContent = `${MESES[today.getMonth()]} ${today.getFullYear()}`;
+
+    if(rec && rec.paid){
+      badge.className = 'estado-badge paid';
+      badge.textContent = '✅ IVA pagado';
+      detalle.textContent = `Comprobante subido el ${fmtFecha(rec.paidDate)}.`;
+      sello.classList.add('show');
+      document.getElementById('sello-fecha').textContent = fmtFecha(rec.paidDate).slice(0,5);
+      btnSubir.style.display = 'none';
+      rowPagado.style.display = 'flex';
+      voucherBox.innerHTML = '';
+    } else {
+      sello.classList.remove('show');
+      btnSubir.style.display = 'block';
+      rowPagado.style.display = 'none';
+      voucherBox.innerHTML = '';
+      const day = today.getDate();
+      if(day < 15){
+        badge.className = 'estado-badge gold';
+        badge.textContent = `📅 Faltan ${15-day} día${15-day===1?'':'s'} para el plazo`;
+        detalle.textContent = 'El plazo para pagar el IVA es del 15 al 20 de este mes.';
+      } else if(day <= 20){
+        const restantes = 20-day;
+        badge.className = 'estado-badge urgent';
+        badge.textContent = restantes===0 ? '🚨 Hoy vence el plazo' : `⏳ Quedan ${restantes} día${restantes===1?'':'s'}`;
+        detalle.textContent = 'Estás dentro del plazo. Sube el comprobante apenas pagues.';
+      } else {
+        const atraso = day-20;
+        badge.className = 'estado-badge late';
+        badge.textContent = `🚨 Atrasado ${atraso} día${atraso===1?'':'s'}`;
+        detalle.textContent = 'El plazo ya venció. Google Calendar seguirá avisando hasta que subas el comprobante.';
+      }
+    }
+  }
+
+  function handleFile(file, targetKey, onDone){
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const img = new Image();
+      img.onload = function(){
+        const maxW = 900;
+        const scale = Math.min(1, maxW/img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width*scale;
+        canvas.height = img.height*scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+        setRecord(targetKey, { paid:true, paidDate:new Date().toISOString(), voucher:dataUrl });
+        onDone();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  document.getElementById('btn-subir').addEventListener('click', ()=>{
+    document.getElementById('file-input').click();
+  });
+
+  // ---------- Avisar a Claude ----------
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._tid);
+    showToast._tid = setTimeout(()=> t.classList.remove('show'), 4200);
+  }
+
+  function mensajeAviso(){
+    const mesTexto = `${MESES[today.getMonth()]} ${today.getFullYear()}`;
+    const rec = getRecord(currentKey);
+    const fecha = rec && rec.paid ? fmtFecha(rec.paidDate) : fmtFecha(today.toISOString());
+    return `Ya pagué el IVA de ${mesTexto} (comprobante del ${fecha}). Por favor cancela los recordatorios de Google Calendar que falten para este mes.`;
+  }
+
+  async function copiarTexto(texto){
+    try{
+      await navigator.clipboard.writeText(texto);
+      return true;
+    }catch(e){
+      // Alternativa para navegadores/contextos sin permiso de portapapeles
+      const ta = document.createElement('textarea');
+      ta.value = texto;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      let ok = false;
+      try{ ok = document.execCommand('copy'); }catch(e2){ ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+  }
+
+  document.getElementById('btn-avisar').addEventListener('click', async ()=>{
+    // Si todavía no está marcado como pagado, lo marcamos ahora (sin comprobante)
+    const rec = getRecord(currentKey);
+    if(!rec || !rec.paid){
+      setRecord(currentKey, { paid:true, paidDate:new Date().toISOString(), voucher:null, sinComprobante:true });
+      renderEstado(); renderCalendar(); renderHistorial();
+    }
+    const texto = mensajeAviso();
+    const copiado = await copiarTexto(texto);
+    window.open('https://claude.ai/new', '_blank');
+    showToast(copiado
+      ? '📋 Mensaje copiado. Pégalo (Ctrl+V) en la pestaña de Claude que se abrió y envíalo.'
+      : 'No se pudo copiar automático. Cópialo tú: "'+texto+'"');
+  });
+  document.getElementById('file-input').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    handleFile(file, currentKey, ()=>{
+      renderEstado(); renderCalendar(); renderHistorial();
+      document.getElementById('file-input').value = '';
+    });
+  });
+  document.getElementById('btn-ver').addEventListener('click', ()=>{
+    const rec = getRecord(currentKey);
+    const box = document.getElementById('voucher-box');
+    if(rec && rec.voucher){
+      box.innerHTML = `<div class="voucher-preview"><img src="${rec.voucher}"><div class="voucher-meta">Comprobante · ${fmtFecha(rec.paidDate)}</div></div>`;
+    } else if(rec && rec.paid){
+      box.innerHTML = `<div class="voucher-meta" style="padding-top:10px;">Marcado como pagado el ${fmtFecha(rec.paidDate)} (sin foto de comprobante). Puedes subirlo cuando quieras con "📎 Subir comprobante".</div>`;
+    }
+  });
+  document.getElementById('btn-quitar').addEventListener('click', ()=>{
+    if(confirm('¿Quitar el comprobante de este mes? Esto marcará el IVA de nuevo como pendiente.')){
+      removeRecord(currentKey);
+      renderEstado(); renderCalendar(); renderHistorial();
+    }
+  });
+
+  // ---------- Calendario navegable ----------
+  function renderCalendar(){
+    const title = document.getElementById('cal-title');
+    title.textContent = `${MESES[viewMonth]} ${viewYear}`;
+
+    const dowRow = document.getElementById('cal-dow-row');
+    dowRow.innerHTML = DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+    const grid = document.getElementById('cal-grid');
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+    const rec = getRecord(keyFor(viewYear, viewMonth));
+
+    let html = '';
+    for(let i=0;i<firstDay;i++) html += `<div class="cal-day empty"></div>`;
+    for(let d=1; d<=daysInMonth; d++){
+      const isVenc = d>=15 && d<=20;
+      const isToday = viewYear===today.getFullYear() && viewMonth===today.getMonth() && d===today.getDate();
+      const isPaidDay = rec && rec.paid && new Date(rec.paidDate).getDate()===d
+                        && new Date(rec.paidDate).getMonth()===viewMonth && new Date(rec.paidDate).getFullYear()===viewYear;
+      let cls = 'cal-day';
+      if(isVenc) cls += ' venc';
+      if(isToday) cls += ' today';
+      if(isPaidDay) cls += ' paid-day';
+      html += `<div class="${cls}">${d}</div>`;
+    }
+    grid.innerHTML = html;
+  }
+
+  document.getElementById('cal-prev').addEventListener('click', ()=>{
+    viewMonth--; if(viewMonth<0){ viewMonth=11; viewYear--; }
+    renderCalendar();
+  });
+  document.getElementById('cal-next').addEventListener('click', ()=>{
+    viewMonth++; if(viewMonth>11){ viewMonth=0; viewYear++; }
+    renderCalendar();
+  });
+
+  // ---------- Historial (últimos 12 meses) ----------
+  function renderHistorial(){
+    const cont = document.getElementById('historial');
+    let html = '';
+    let d = new Date(today.getFullYear(), today.getMonth(), 1);
+    for(let i=0;i<12;i++){
+      const y = d.getFullYear(), m = d.getMonth();
+      const key = keyFor(y,m);
+      const rec = getRecord(key);
+      const esFuturo = (y>today.getFullYear()) || (y===today.getFullYear() && m>today.getMonth());
+      if(!esFuturo){
+        if(rec && rec.paid){
+          const thumb = rec.voucher
+            ? `<img class="hist-thumb" src="${rec.voucher}">`
+            : `<div class="hist-icon">🔔</div>`;
+          html += `<div class="hist-item">
+            ${thumb}
+            <div class="hist-info">
+              <div class="hist-mes">${MESES[m]} ${y}</div>
+              <div class="hist-sub">Pagado el ${fmtFecha(rec.paidDate)}${rec.voucher ? '' : ' (sin foto)'}</div>
+            </div>
+            <div class="hist-tag ok">Pagado</div>
+          </div>`;
+        } else {
+          html += `<div class="hist-item">
+            <div class="hist-icon">📄</div>
+            <div class="hist-info">
+              <div class="hist-mes">${MESES[m]} ${y}</div>
+              <div class="hist-sub">Sin comprobante subido</div>
+            </div>
+            <div class="hist-tag miss">Falta</div>
+          </div>`;
+        }
+      }
+      d.setMonth(d.getMonth()-1);
+    }
+    cont.innerHTML = html || '<div class="hist-sub" style="padding:14px 0;">Todavía no hay historial.</div>';
+  }
+
+  // ---------- Sincronización con GitHub (igual que en pepitocostos) ----------
+  const SYNC_KEY = PREFIX + 'sync-config';
+
+  function getSyncConfig(){
+    try{ return JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); }
+    catch(e){ return null; }
+  }
+  function setSyncConfig(cfg){ localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); }
+
+  function b64EncodeUnicode(str){
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m,p1)=>String.fromCharCode('0x'+p1)));
+  }
+  function b64DecodeUnicode(str){
+    return decodeURIComponent(atob(str).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+  }
+
+  function collectAllRecords(){
+    const out = {};
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(PREFIX) && k !== SYNC_KEY){
+        const shortKey = k.slice(PREFIX.length);
+        const rec = getRecord(shortKey);
+        if(rec) out[shortKey] = rec;
+      }
+    }
+    return out;
+  }
+  function applyAllRecords(obj){
+    Object.keys(obj || {}).forEach(k => setRecord(k, obj[k]));
+  }
+  function mergeRecords(local, remote){
+    const merged = {};
+    const keys = new Set([...Object.keys(local||{}), ...Object.keys(remote||{})]);
+    keys.forEach(k=>{
+      const a = local[k], b = remote[k];
+      if(a && b){
+        if(a.paid && !b.paid) merged[k] = a;
+        else if(b.paid && !a.paid) merged[k] = b;
+        else if(a.paid && b.paid) merged[k] = new Date(a.paidDate) >= new Date(b.paidDate) ? a : b;
+        else merged[k] = a;
+      } else {
+        merged[k] = a || b;
+      }
+    });
+    return merged;
+  }
+
+  async function githubRequest(cfg, method, body){
+    const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path || 'iva-data.json'}`;
+    return fetch(url, {
+      method: method || 'GET',
+      headers:{
+        'Authorization': `Bearer ${cfg.token}`,
+        'Accept': 'application/vnd.github+json'
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+  }
+
+  function setSyncStatus(text, ok){
+    const el = document.getElementById('sync-status');
+    el.textContent = text;
+    el.className = 'estado-detalle' + (ok===true ? ' sync-status-ok' : ok===false ? ' sync-status-err' : '');
+    const dot = document.getElementById('sync-dot');
+    dot.className = 'sync-dot' + (ok===true ? ' ok' : ok===false ? ' err' : ' pending');
+  }
+
+  async function syncNow(silent){
+    const cfg = getSyncConfig();
+    if(!cfg) return;
+    if(!silent) setSyncStatus('🔄 Sincronizando…', null);
+    try{
+      const getRes = await githubRequest(cfg, 'GET');
+      let remoteData = {}, sha = null;
+      if(getRes.status === 200){
+        const json = await getRes.json();
+        sha = json.sha;
+        remoteData = JSON.parse(b64DecodeUnicode(json.content.replace(/\n/g,'')) || '{}');
+      } else if(getRes.status !== 404){
+        const errBody = await getRes.json().catch(()=>({}));
+        throw new Error(errBody.message || `Error ${getRes.status} al leer el repositorio`);
+      }
+
+      const localData = collectAllRecords();
+      const merged = mergeRecords(localData, remoteData);
+      applyAllRecords(merged);
+
+      const putRes = await githubRequest(cfg, 'PUT', {
+        message: `Sync IVA data · ${new Date().toISOString()}`,
+        content: b64EncodeUnicode(JSON.stringify(merged)),
+        sha: sha || undefined
+      });
+      if(!putRes.ok){
+        const errBody = await putRes.json().catch(()=>({}));
+        throw new Error(errBody.message || `Error ${putRes.status} al guardar en GitHub`);
+      }
+
+      cfg.lastSync = new Date().toISOString();
+      setSyncConfig(cfg);
+      renderEstado(); renderCalendar(); renderHistorial();
+      setSyncStatus(`✅ Última sincronización: ${fmtFecha(cfg.lastSync)}`, true);
+      if(!silent) showToast('🔄 Sincronizado con GitHub');
+    }catch(err){
+      setSyncStatus(`⚠️ ${err.message || 'No se pudo sincronizar'}`, false);
+      if(!silent) showToast('⚠️ Error al sincronizar: revisa el token, usuario y repositorio.');
+    }
+  }
+
+  function setSyncOpen(open){
+    document.getElementById('sync-body').classList.toggle('open', open);
+    document.getElementById('sync-toggle').classList.toggle('open', open);
+  }
+  document.getElementById('sync-toggle').addEventListener('click', ()=>{
+    const isOpen = document.getElementById('sync-body').classList.contains('open');
+    setSyncOpen(!isOpen);
+  });
+
+  function renderSyncUI(){
+    const cfg = getSyncConfig();
+    const form = document.getElementById('sync-form');
+    const actions = document.getElementById('sync-actions');
+    if(cfg && cfg.owner && cfg.repo && cfg.token){
+      form.style.display = 'none';
+      actions.style.display = 'flex';
+      setSyncStatus(cfg.lastSync ? `Última sincronización: ${fmtFecha(cfg.lastSync)}` : `Configurado: ${cfg.owner}/${cfg.repo} — toca "Sincronizar ahora"`, null);
+      setSyncOpen(false); // ya configurado: queda colapsado, solo el punto de estado a la vista
+    } else {
+      form.style.display = 'block';
+      actions.style.display = 'none';
+      setSyncStatus('Sin configurar todavía.', null);
+      setSyncOpen(true); // primera vez: se abre solo para mostrar el formulario
+    }
+  }
+
+  document.getElementById('btn-guardar-config').addEventListener('click', ()=>{
+    const owner = document.getElementById('sync-owner').value.trim();
+    const repo = document.getElementById('sync-repo').value.trim();
+    const token = document.getElementById('sync-token').value.trim();
+    if(!owner || !repo || !token){
+      showToast('Completa usuario, repositorio y token.');
+      return;
+    }
+    setSyncConfig({ owner, repo, token, path:'iva-data.json', lastSync:null });
+    renderSyncUI();
+    showToast('Configuración guardada. Ya puedes sincronizar.');
+  });
+  document.getElementById('btn-sync-now').addEventListener('click', ()=> syncNow(false));
+  document.getElementById('btn-sync-editar').addEventListener('click', ()=>{
+    const cfg = getSyncConfig() || {};
+    document.getElementById('sync-owner').value = cfg.owner || '';
+    document.getElementById('sync-repo').value = cfg.repo || '';
+    document.getElementById('sync-token').value = '';
+    document.getElementById('sync-form').style.display = 'block';
+    document.getElementById('sync-actions').style.display = 'none';
+    setSyncOpen(true);
+  });
+
+  renderSyncUI();
+  if(getSyncConfig()) syncNow(true); // auto-pull silencioso al abrir, para traer datos de otros dispositivos
+
+  renderEstado();
+  renderCalendar();
+  renderHistorial();
+})();
+</script>
+</body>
+</html>
